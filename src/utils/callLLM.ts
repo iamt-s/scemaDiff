@@ -1,13 +1,12 @@
 import dotenv from "dotenv";
 import axios from "axios";
-import { GoogleGenAI } from "@google/genai";
-const ai = new GoogleGenAI({apiKey: "AIzaSyArtrtopQShoclZZ3tpblLUdvrh_zdSGJA"});
 
 dotenv.config();
-  
+
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 export async function callLLM(diff: string): Promise<string> {
-    const prompt = `
+  const prompt = `
 You are a GraphQL expert. Given the following schema diff, classify the changes as breaking or non-breaking. For each change explain briefly why.
 
 DIFF:
@@ -21,18 +20,28 @@ BREAKING CHANGES:
 NON-BREAKING CHANGES:
 - ...
   `;
+
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-    });
-  if (!response.text) {
-      throw new Error("Gemini API did not return a response text.");
-    }
-    return response.text;
+    const response = await axios.post(
+      `${GEMINI_API_URL}?key=${process.env.GEMINI_API_KEY}`,
+      {
+        contents: [
+          {
+            parts: [{ text: prompt }]
+          }
+        ]
+      },
+      {
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    // Gemini returns the result in response.data.candidates[0].content.parts[0].text
+    return response.data.candidates?.[0]?.content?.parts?.[0]?.text || "No response from Gemini";
   } catch (error: any) {
     console.error('Gemini API call failed:', error?.response?.data || error?.message || error);
-    throw new Error('Gemini API call failed: ' + (error?.response?.data?.error || error?.message || error));
+    throw new Error('Gemini API call failed: ' + (error?.response?.data?.error?.message || error?.message || error));
   }
 }
-   
