@@ -1,11 +1,13 @@
 import dotenv from "dotenv";
-import {Ollama} from "ollama-node";
-dotenv.config();
- const ollama =new Ollama();
-  ollama.setModel("llama2");
+import axios from "axios";
+import { GoogleGenAI } from "@google/genai";
+const ai = new GoogleGenAI({apiKey: "AIzaSyArtrtopQShoclZZ3tpblLUdvrh_zdSGJA"});
 
-export async function summarizeDiff(diff: string): Promise<string> {
-  const prompt = `
+dotenv.config();
+  
+
+export async function callLLM(diff: string): Promise<string> {
+    const prompt = `
 You are a GraphQL expert. Given the following schema diff, classify the changes as breaking or non-breaking. For each change explain briefly why.
 
 DIFF:
@@ -19,16 +21,18 @@ BREAKING CHANGES:
 NON-BREAKING CHANGES:
 - ...
   `;
-
-//   const completion = await openai.chat.completions.create({
-//     model: "gpt-4o",  // Or "gpt-4"
-//     messages: [
-//       { role: "system", content: "You are an expert GraphQL API reviewer." },
-//       { role: "user", content: prompt }
-//     ],
-//     temperature: 0
-//   });
-
- const response = await ollama.generate(prompt);
-  return response.output ?? ""; // Ensure a string is always returned
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+  if (!response.text) {
+      throw new Error("Gemini API did not return a response text.");
+    }
+    return response.text;
+  } catch (error: any) {
+    console.error('Gemini API call failed:', error?.response?.data || error?.message || error);
+    throw new Error('Gemini API call failed: ' + (error?.response?.data?.error || error?.message || error));
+  }
 }
+   
