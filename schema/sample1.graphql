@@ -1,11 +1,42 @@
+# Define the schema
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+# Query type for fetching data
+type Query {
+  users: [User!]!
+  posts: [Post!]!
+  comments: [Comment!]!
+  user(id: ID!): User
+  post(id: ID!): Post
+  comment(id: ID!): Comment
+}
+
+# Mutation type for modifying data
+type Mutation {
+  createUser(name: String!, email: String!): User!
+  createPost(title: String!, content: String!, authorId: ID!): Post!
+  createComment(content: String!, postId: ID!, authorId: ID!): Comment!
+}
+
+# User type
 type User {
   id: ID!
   name: String!
-  email: String
-  age: Int
+  email: String!
+  posts: [Post!]!
+  comments: [Comment!]!
 }
 
-type Query {
-  getUser(id: ID!): User
-  listUsers: [User!]!
+# Post type
+type Post {
+  id: ID!
+  title: String!
+  content: String!
+  author: User!
+  comments: [Comment!]!
 }
+
+

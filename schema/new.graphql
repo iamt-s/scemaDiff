@@ -1,11 +1,62 @@
+# Define the schema
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
+
+# Query type for fetching data
+type Query {
+  users(active: Boolean): [User!]!       # Added filter argument
+  posts(limit: Int, offset: Int): [Post!]!  # Added pagination arguments
+  comments: [Comment!]!
+  user(id: ID!): User
+  post(id: ID!): Post
+  comment(id: ID!): Comment
+  searchUsers(keyword: String!): [User!]!   # New query
+}
+
+# Mutation type for modifying data
+type Mutation {
+  createUser(name: String!, email: String!): User!
+  createPost(title: String!, content: String!, authorId: ID!): Post!
+  createComment(content: String!, postId: ID!, authorId: ID!): Comment!
+  updateUser(id: ID!, name: String, email: String): User!    # New mutation
+  deletePost(id: ID!): Boolean!                              # New mutation
+}
+
+# Subscription type for real-time updates
+type Subscription {
+  postAdded: Post!
+  commentAdded(postId: ID!): Comment!
+}
+
+# User type
 type User {
   id: ID!
   name: String!
-  email: String
-  age: Int
+  email: String!
+  isActive: Boolean!                     # New field
+  posts: [Post!]!
+  comments: [Comment!]!
 }
 
-type Query {
-  getUser(id: ID!): User
-  listUsers: [User!]!
+# Post type
+type Post {
+  id: ID!
+  title: String!
+  content: String!
+  author: User!
+  comments: [Comment!]!
+  createdAt: String!                    # New field
+  updatedAt: String                     # New field
+}
+
+# Comment type
+type Comment {
+  id: ID!
+  content: String!
+  post: Post!
+  author: User!
+  createdAt: String!                    # New field
 }
