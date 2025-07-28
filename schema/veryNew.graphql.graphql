@@ -19,7 +19,7 @@ type Country {
   emojiU: String!
   languages: [Language!]!
   name(lang: String): String!
-
+  native: String!
   phone: String!
   phones: [String!]!
   states: [State!]!
@@ -37,7 +37,7 @@ type Language {
   code: ID!
   name: String!
   native: String!
- 
+  rtl: Boolean!
 }
 
 input LanguageFilterInput {
@@ -61,13 +61,14 @@ type State {
 
 input StringQueryOperatorInput {
   eq: String
-  
+  in: [String!]
   ne: String
   nin: [String!]
- 
+  regex: String
 }
 
 type Subdivision {
   code: ID!
-
+  emoji: String
+  name: String!
 }

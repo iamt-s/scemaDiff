@@ -7,7 +7,7 @@ const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/
 
 export async function callLLM(diff: string): Promise<string> {
   const prompt = `
-You are a GraphQL expert. Given the following schema diff, classify the changes as breaking or non-breaking. For each change explain briefly why.
+You are a GraphQL expert. Given the following schema diff, classify the changes as breaking or non-breaking. For each change explain briefly why. also fomrat the output in markdown format with appropriate headings.
 
 DIFF:
 ${diff}
@@ -19,7 +19,8 @@ BREAKING CHANGES:
 
 NON-BREAKING CHANGES:
 - ...
-  `;
+Please provide Jest test stubs for the schema changes, and format your response as a TypeScript code block.
+`;
 
   try {
     const response = await axios.post(
