@@ -4,9 +4,8 @@ import { diffSchemas } from "./utils/diffSchemas";
 import { callLLM } from "./utils/callLLM";
 import chalk from "chalk";
 import fs from "fs";
-import { execSync } from "child_process";
-const latestPath = "./scemaDiff/schema/veryNew.graphql.graphql";
-
+import { generateTestStubsFromLLMAnalysisFile } from "./generate_llm_test_stubs";
+const latestPath = "./scemaDiff/schema/veryNew.graphql";
 fetchSchema('https://countries.trevorblades.com/graphql')  .then(schema => {
        saveSchema(latestPath, schema);
      main(); // <-- Call main only after schema is saved
@@ -40,13 +39,8 @@ async function main() {
   // Save full output to file for complete viewing
   fs.writeFileSync("./scemaDiff/llm_analysis.md", summary);
   console.log("LLM analysis saved to llm_analysis.md. Open this file in a Markdown viewer for full output.");
+  generateTestStubsFromLLMAnalysisFile();
 
-  // Automatically run the test stub generator script after LLM analysis
-  try {
-    execSync("npx ts-node ./scemaDiff/src/generate_llm_test_stubs.ts", { stdio: "inherit" });
-  } catch (err) {
-    console.error("Error generating test stubs:", err);
-  }
 }
 
 function generateTestStubsFromLLMAnalysis(llmAnalysisPath: string, testFolder: string) {
@@ -66,7 +60,7 @@ function generateTestStubsFromLLMAnalysis(llmAnalysisPath: string, testFolder: s
   }
 
   if (!fs.existsSync(testFolder)) fs.mkdirSync(testFolder, { recursive: true });
-  const testFilePath = `${testFolder}/llm_schema_additions.test.ts`;
+  const testFilePath = getTimestampedFilename(testFolder);
 
   let testFileContent = `// Auto-generated test stubs for newly added schema objects\nimport { gql } from "@apollo/client";\ndescribe("GraphQL Schema Additions", () => {\n`;
 
@@ -85,4 +79,7 @@ function generateTestStubsFromLLMAnalysis(llmAnalysisPath: string, testFolder: s
   fs.writeFileSync(testFilePath, testFileContent);
   console.log(chalk.green(`Test stubs generated at: ${testFilePath}`));
 }
-
+function getTimestampedFilename(folder: string): string {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  return `${folder}/${timestamp}.test.ts`;
+}

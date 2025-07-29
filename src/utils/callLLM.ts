@@ -19,7 +19,7 @@ BREAKING CHANGES:
 
 NON-BREAKING CHANGES:
 - ...
-Please provide Jest test stubs for the schema changes, and format your response as a TypeScript code block.
+Please provide Jest test stubs for the schema changes happened, and format your response as a TypeScript code block.
 `;
 
   try {
