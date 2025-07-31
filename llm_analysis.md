@@ -1,103 +1,197 @@
-Okay, here's the classification of the schema changes, their explanations, and the Jest test stubs, all formatted as requested.
+Okay, let's analyze the schema diff and classify the changes as breaking or non-breaking, followed by Jest test stubs.
 
-## Schema Change Classification
+## Schema Diff Analysis: Breaking vs. Non-Breaking
 
-Here's the classification of the provided schema changes as breaking or non-breaking:
-
-**BREAKING CHANGES:**
-
-*   None.  The provided additions are all adding fields, not removing or altering existing ones.
+Here's a breakdown of whether each added field represents a breaking or non-breaking change:
 
 **NON-BREAKING CHANGES:**
 
-*   `rtl: Boolean!` - Adding a new non-nullable field `rtl` is generally a non-breaking change.  Clients that don't request this field will continue to work as before.  Clients that *do* request this field will now receive data, but older clients wouldn't have been expecting it anyway.
-*   `in: [String!]` - Adding a new field `in` that is a list of non-nullable strings. This is non-breaking for the same reason as the `rtl` field.
-*   `regex: String` - Adding a new nullable field `regex` is a non-breaking change. Clients not requesting it are unaffected, and clients that do can handle the possibility of `null`.
-*   `emoji: String` - Adding a new nullable field `emoji` is a non-breaking change. Clients not requesting it are unaffected, and clients that do can handle the possibility of `null`.
+-   `rtl: Boolean!`
+    -   **Explanation:** Adding a non-nullable field `rtl` to a type (presumably an existing type, since the diff doesn't specify creation) is generally *not* a breaking change.  Existing queries that don't select this field will continue to function without modification. The server will provide the default value for the field.
+-   `in: [String!]`
+    -   **Explanation:**  Similarly, adding a list of non-nullable strings  `in` to a type is typically non-breaking. Existing queries won't be affected unless they explicitly request this new field.
+-   `regex: String`
+    -   **Explanation:** Adding a nullable `String` field named `regex` is a non-breaking change. Existing queries are unaffected.
+-   `emoji: String`
+    -   **Explanation:** Adding a nullable `String` field named `emoji` is a non-breaking change. Existing queries are unaffected.
+
+**BREAKING CHANGES:**
+
+-   None of the listed changes are breaking.  Adding fields (even non-nullable ones) is generally backwards compatible, *as long as* the underlying resolvers can provide default values or the system handles them gracefully.  A breaking change usually involves removing fields, changing types of existing fields, or making nullable fields non-nullable.
 
 ## Jest Test Stubs (TypeScript)
 
-Here's a set of Jest test stubs in TypeScript that you can adapt to verify these schema changes. These tests will generally check that the fields are present and have the correct types.  **Important:**  These are *stubs* and will need to be adapted to your specific schema loading and introspection methods.  You'll need to replace placeholder functions like `loadSchema()` and `introspectSchema()` with your actual implementations.  Also, the specifics of how you check for types in `introspectSchema()` output depend on the library you use for schema introspection.
+Here are some Jest test stubs to help verify the schema changes.  These tests assume you have a way to introspect the GraphQL schema (e.g., using `graphql-tools` to load it from SDL files or from a running GraphQL server).  They also assume you have a way to execute GraphQL queries against a test server or schema.
 
 ```typescript
-describe('Schema Changes', () => {
-  let schema: any; // Replace 'any' with a more specific type if possible
+import { graphql } from 'graphql'; // Or import your preferred GraphQL execution method
+import { makeExecutableSchema } from '@graphql-tools/schema'; // or your schema building method
+import gql from 'graphql-tag'; // Or your preferred way to define GraphQL queries/mutations
 
-  beforeAll(async () => {
-    // Replace loadSchema() with your actual schema loading function.
-    // This could involve reading from a file, fetching from a server, etc.
-    // schema = await loadSchema(); // Example: loadSchema('./schema.graphql');
-    // Simulate schema loading for testability
-    schema = {
-      getType: (typeName: string) => {
-        if (typeName === 'Query') { // Assuming a 'Query' type exists
-          return {
-            getFields: () => ({}), // Initially empty fields
-          };
-        }
-        return null;
+describe('Schema Changes', () => {
+  let schema: any; // Replace 'any' with your schema type
+
+  beforeAll(() => {
+    // Load your schema here.  This is just a placeholder.
+    // Replace with your actual schema loading mechanism.
+    // For example:
+    // schema = buildSchema(fs.readFileSync('schema.graphql', 'utf8'));
+
+    const typeDefs = gql`
+      type Query {
+        testObject: TestObjectType
+      }
+
+      type TestObjectType {
+        id: ID!
+        existingField: String
+        rtl: Boolean!
+        in: [String!]
+        regex: String
+        emoji: String
+      }
+    `;
+
+    const resolvers = {
+      Query: {
+        testObject: () => ({
+          id: '123',
+          existingField: 'test',
+          rtl: true,
+          in: ['a', 'b'],
+          regex: '.*',
+          emoji: ':)',
+        }),
       },
     };
+    schema = makeExecutableSchema({ typeDefs, resolvers });
   });
 
-  it('should have added the "rtl" field with type Boolean!', async () => {
-      // Example approach using introspection (replace with your actual introspection method)
-      const queryType = schema.getType('Query'); // Replace 'Query' if applicable
-      const fields = queryType.getFields();
-      expect(fields).toBeDefined();
+  it('should have the new rtl field on TestObjectType', async () => {
+    const query = gql`
+      query {
+        testObject {
+          rtl
+        }
+      }
+    `;
+    const result = await graphql({ schema, source: query.loc?.source.body });
 
-      // Mimic adding fields for testing purposes
-      fields.rtl = { type: { name: 'Boolean', nonNull: true } }; // simulate the field addition
-
-      expect(fields.rtl).toBeDefined();
-      expect(fields.rtl.type.name).toBe('Boolean');
-      expect(fields.rtl.type.nonNull).toBe(true);
+    expect(result).toEqual({
+      data: {
+        testObject: {
+          rtl: true,
+        },
+      },
+    });
+    expect(result.errors).toBeUndefined();
   });
 
-  it('should have added the "in" field with type [String!]', async () => {
-      const queryType = schema.getType('Query');
-      const fields = queryType.getFields();
-      expect(fields).toBeDefined();
+  it('should have the new in field on TestObjectType', async () => {
+    const query = gql`
+      query {
+        testObject {
+          in
+        }
+      }
+    `;
 
-      fields.in = { type: { kind: 'LIST', ofType: { name: 'String', nonNull: true } } };
+    const result = await graphql({ schema, source: query.loc?.source.body });
 
-      expect(fields.in).toBeDefined();
-      expect(fields.in.type.kind).toBe('LIST');
-      expect(fields.in.type.ofType.name).toBe('String');
-      expect(fields.in.type.ofType.nonNull).toBe(true);
+    expect(result).toEqual({
+      data: {
+        testObject: {
+          in: ['a', 'b'],
+        },
+      },
+    });
+    expect(result.errors).toBeUndefined();
   });
 
-  it('should have added the "regex" field with type String', async () => {
-      const queryType = schema.getType('Query');
-      const fields = queryType.getFields();
-      expect(fields).toBeDefined();
+  it('should have the new regex field on TestObjectType', async () => {
+    const query = gql`
+      query {
+        testObject {
+          regex
+        }
+      }
+    `;
 
-      fields.regex = { type: { name: 'String' } };
+    const result = await graphql({ schema, source: query.loc?.source.body });
 
-      expect(fields.regex).toBeDefined();
-      expect(fields.regex.type.name).toBe('String');
+    expect(result).toEqual({
+      data: {
+        testObject: {
+          regex: '.*',
+        },
+      },
+    });
+    expect(result.errors).toBeUndefined();
   });
 
-  it('should have added the "emoji" field with type String', async () => {
-      const queryType = schema.getType('Query');
-      const fields = queryType.getFields();
-      expect(fields).toBeDefined();
+  it('should have the new emoji field on TestObjectType', async () => {
+    const query = gql`
+      query {
+        testObject {
+          emoji
+        }
+      }
+    `;
 
-      fields.emoji = { type: { name: 'String' } };
+    const result = await graphql({ schema, source: query.loc?.source.body });
 
-      expect(fields.emoji).toBeDefined();
-      expect(fields.emoji.type.name).toBe('String');
+    expect(result).toEqual({
+      data: {
+        testObject: {
+          emoji: ':)',
+        },
+      },
+    });
+    expect(result.errors).toBeUndefined();
+  });
+
+  it('should not break existing queries when selecting existing fields', async () => {
+    const query = gql`
+      query {
+        testObject {
+          id
+          existingField
+        }
+      }
+    `;
+
+    const result = await graphql({ schema, source: query.loc?.source.body });
+
+    expect(result).toEqual({
+      data: {
+        testObject: {
+          id: '123',
+          existingField: 'test',
+        },
+      },
+    });
+    expect(result.errors).toBeUndefined();
   });
 });
-
 ```
 
-**Important Considerations:**
+Key points about the tests:
 
-*   **Schema Loading:**  The key is to correctly load and introspect your GraphQL schema in the `beforeAll` block.  Adjust the `loadSchema()` placeholder to your specific needs.
-*   **Introspection:**  The `introspectSchema()` placeholder and the way you access the fields and their types need to match your schema introspection library (e.g., `graphql-tools`, `apollo-server`, or your own custom implementation).
-*   **Error Handling:** Add appropriate error handling for schema loading and introspection failures.
-*   **Type Checking:** The code above assumes simple type names.  For more complex types (e.g., custom scalar types or types within other types), you'll need to adjust the type checking logic accordingly.
-*   **`graphql` package:** You will need to have the `graphql` package installed in your project (`npm install graphql` or `yarn add graphql`).
+*   **Schema Loading:**  The `beforeAll` block is where you'll load your actual schema. Replace the placeholder comment with your specific schema loading logic.
+*   **Query Execution:** The tests use `graphql` (from the `graphql` package) to execute queries against the schema. Adapt this if you're using a different GraphQL execution environment.
+*   **Test Structure:** Each `it` block tests for the presence of one of the new fields.  They execute a simple query that selects only that new field and asserts that the result contains the expected data.
+*   **Existing Queries:** There's a test to verify that existing queries continue to work after the schema changes.
+*   **Error Checking:**  Each test checks that `result.errors` is `undefined`, indicating that the query executed successfully without any GraphQL errors.
+*   **`graphql-tag`:**  The tests use `graphql-tag` (or `gql`) to define the GraphQL queries in a readable format. You can use any method you prefer to construct your queries.
+*   **Mocked Resolvers:**  The `resolvers` object within `beforeAll` provides mock resolvers for the `TestObjectType`. This is essential to provide data for the new fields being added. In a real-world scenario, you would use your actual data fetching logic.
+*   **`source: query.loc?.source.body`:** The tests are retrieving the query text from the query location within the GraphQL Tag definition. This provides the query text in a string format, which is how `graphql` accepts the query.
 
-Remember to adapt the test stubs to your specific schema and testing environment. The provided code gives you a starting point.
+Remember to install the necessary dependencies:
+
+```bash
+npm install graphql @graphql-tools/schema graphql-tag --save-dev
+# or
+yarn add graphql @graphql-tools/schema graphql-tag --dev
+```
+
+These tests give you a basic framework for verifying your schema changes. You can expand upon them to test more complex scenarios and edge cases.  Crucially, make sure your schema loading and query execution mechanisms are properly configured to match your project's setup.
